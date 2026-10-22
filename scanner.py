@@ -183,6 +183,24 @@ def top_symbols(n):
     rows.sort(key=lambda x: x[1], reverse=True)
     return rows[:n], base
 
+def send_telegram(message):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        print("Telegram bilgileri bulunamadi; bildirim gonderilmedi.")
+        return
+
+    try:
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data={"chat_id": chat_id, "text": message},
+            timeout=15,
+        )
+        response.raise_for_status()
+        print("Telegram bildirimi gonderildi.")
+    except Exception as e:
+        print(f"Telegram bildirimi gonderilemedi: {e}")
 
 def log_signal(row):
     exists = os.path.exists(LOG_FILE)
@@ -256,7 +274,15 @@ def main():
         })
     if found:
         print(f"\nSinyaller {LOG_FILE} dosyasina da kaydedildi (sonradan basari olcmek icin).")
-
+        message = "🔔 COIN TARAMA SONUÇLARI\n\n"
+        for r in found:
+            message += (
+                f"Coin: {r['symbol']}\n"
+                f"Sıkışma: %{r['spread_pct']}\n"
+                f"Fiyat: {r['last_price']}\n"
+                f"24 saatlik değişim: %{r['chg24h']}\n\n"
+            )
+        send_telegram(message)
 
 if __name__ == "__main__":
     main()
